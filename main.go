@@ -5,26 +5,26 @@ import (
 	"github.com/gotk3/gotk3/gdk"
 	"log"
 	"archive/zip"
-    "fmt"
     "io"
     "os"
     "path/filepath"
     "strings"
 	"sort"
+	"strconv"
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal("pagepal: file not specified")
+		log.Fatal("File not specified")
 	}
 
 	gtk.Init(nil)
 
 	win, err := gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
 	if err != nil {
-		log.Fatal("pagepal: unable to create window:", err)
+		log.Fatal("Unable to create window:", err)
 	}
-	win.SetTitle("PagePal")
+	win.SetTitle("PagePal - Page 1")
 	win.Connect("destroy", func() {
 		gtk.MainQuit()
 	})
@@ -33,7 +33,7 @@ func main() {
 	
 	dst, err := os.MkdirTemp("", "unzipped-")
     if err != nil {
-        panic(err)
+        log.Fatal("Extraction failed")
     }
     defer os.RemoveAll(dst)
 
@@ -47,35 +47,33 @@ func main() {
 
     for _, f := range archive.File {
         filePath := filepath.Join(dst, f.Name)
-        fmt.Println("unzipping file ", filePath)
+        log.Println("Unzipping file", filePath)
 
-        if !strings.HasPrefix(filePath, filepath.Clean(dst)+string(os.PathSeparator)) {
-            fmt.Println("invalid file path")
-            return
-        }
-        
-        if f.FileInfo().IsDir() {
-            fmt.Println("creating directory...")
-            os.MkdirAll(filePath, os.ModePerm)
-            continue
+        if !strings.HasPrefix(filePath, filepath.Clean(dst) + string(os.PathSeparator)) {
+            log.Println("Invalid file path")
+			log.Fatal("Extraction failed")
         }
 
         if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
-            panic(err)
+            log.Println("Failed to create directory:", err)
+			log.Fatal("Extraction failed")
         }
 
-        dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+        dstFile, err := os.OpenFile(filePath, os.O_WRONLY | os.O_CREATE | os.O_TRUNC, f.Mode())
         if err != nil {
-            panic(err)
+            log.Println("Failed to create file:", err)
+			log.Fatal("Extraction failed")
         }
 
         fileInArchive, err := f.Open()
         if err != nil {
-            panic(err)
+            log.Println("Failed to open file:", err)
+			log.Fatal("Extraction failed")
         }
 
         if _, err := io.Copy(dstFile, fileInArchive); err != nil {
-            panic(err)
+            log.Println("Failed to extract file:", err)
+			log.Fatal("Extraction failed")
         }
 
         dstFile.Close()
@@ -90,7 +88,7 @@ func main() {
 
 	pixbuf, err := gdk.PixbufNewFromFile(pages[page])
 	if err != nil {
-		log.Fatal("pagepal: unable to load image:", err)
+		log.Fatal("Unable to load image:", err)
 	}
 
 	width := pixbuf.GetWidth() / 4
@@ -129,9 +127,11 @@ func main() {
 				return false
 			}
 
+			win.SetTitle("PagePal - Page " + strconv.FormatInt(int64(page + 1), 10))
+
 			newPixbuf, err := gdk.PixbufNewFromFile(pages[page])
 			if err != nil {
-				log.Fatal("pagepal: unable to load image:", err)
+				log.Fatal("Unable to load image:", err)
 			}
 
 			newWidth := newPixbuf.GetWidth() / 4

@@ -10,4 +10,5 @@ build:
 	go build -o $(OUT)
 
 clean:
+	go clean
 	rm $(OUT)
