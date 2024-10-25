@@ -1,4 +1,4 @@
-# PagePal
+# *PagePal*
 CBZ reader written in Go
 
 ## Features
